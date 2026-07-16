@@ -1,0 +1,1044 @@
+-- Serviços do Roblox
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+local camera = workspace.CurrentCamera
+
+-- Chave correta para liberação
+local KEY_CORRETA = "Wadm_"
+local keyAprovada = false
+
+-- Paleta de Cores Roxas
+local ROXO_PRINCIPAL = Color3.fromRGB(138, 43, 226) -- Roxo vibrante
+local ROXO_ESCURO = Color3.fromRGB(20, 20, 25)      -- Fundo escuro com toque de roxo
+local ROXO_CLARO = Color3.fromRGB(180, 140, 255)     -- Roxo claro para destaques
+local ROXO_BOTAO_OFF = Color3.fromRGB(45, 40, 50)    -- Botão desligado
+
+local CORES_FILTRO = {
+	ALL = {Nome = "Todos", Cor = ROXO_PRINCIPAL},
+	ORANGE = {Nome = "Laranja", Cor = Color3.fromRGB(255, 102, 204)},
+	BLUE = {Nome = "Azul", Cor = Color3.fromRGB(0, 0, 255)},
+	RED = {Nome = "Vermelho", Cor = Color3.fromRGB(255, 0, 0)}
+}
+local filtroAtual = "ALL" 
+
+-- ScreenGui Principal
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "Mrc_++"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
+
+--- ==========================================
+--- 🔑 SISTEMA DE KEY (UI & LÓGICA)
+--- ==========================================
+local keyPanel = Instance.new("Frame")
+keyPanel.Name = "KeyPanel"
+keyPanel.Size = UDim2.new(0, 320, 0, 200)
+keyPanel.Position = UDim2.new(0.5, -160, 0.5, -100)
+keyPanel.BackgroundColor3 = ROXO_ESCURO
+keyPanel.BorderSizePixel = 0
+keyPanel.Parent = screenGui
+
+local keyStroke = Instance.new("UIStroke")
+keyStroke.Color = ROXO_PRINCIPAL
+keyStroke.Thickness = 2
+keyStroke.Parent = keyPanel
+
+local keyTitle = Instance.new("TextLabel")
+keyTitle.Size = UDim2.new(1, 0, 0, 45)
+keyTitle.BackgroundTransparency = 1
+keyTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+keyTitle.Font = Enum.Font.GothamBold
+keyTitle.TextSize = 16
+keyTitle.Text = "🔑 Sistema de Verificação"
+keyTitle.Parent = keyPanel
+
+local keyTextBox = Instance.new("TextBox")
+keyTextBox.Size = UDim2.new(1, -40, 0, 40)
+keyTextBox.Position = UDim2.new(0, 20, 0, 60)
+keyTextBox.BackgroundColor3 = Color3.fromRGB(35, 30, 40)
+keyTextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+keyTextBox.PlaceholderColor3 = Color3.fromRGB(150, 130, 170)
+keyTextBox.PlaceholderText = "Insira a Key aqui..."
+keyTextBox.Font = Enum.Font.GothamMedium
+keyTextBox.TextSize = 14
+keyTextBox.Text = ""
+keyTextBox.BorderSizePixel = 0
+keyTextBox.Parent = keyPanel
+
+local keyVerifyBtn = Instance.new("TextButton")
+keyVerifyBtn.Size = UDim2.new(1, -40, 0, 40)
+keyVerifyBtn.Position = UDim2.new(0, 20, 0, 120)
+keyVerifyBtn.BackgroundColor3 = ROXO_PRINCIPAL
+keyVerifyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+keyVerifyBtn.Font = Enum.Font.GothamBold
+keyVerifyBtn.TextSize = 14
+keyVerifyBtn.Text = "Verificar"
+keyVerifyBtn.BorderSizePixel = 0
+keyVerifyBtn.Parent = keyPanel
+
+local erroLabel = Instance.new("TextLabel")
+erroLabel.Size = UDim2.new(1, 0, 0, 20)
+erroLabel.Position = UDim2.new(0, 0, 0, 170)
+erroLabel.BackgroundTransparency = 1
+erroLabel.TextColor3 = Color3.fromRGB(220, 60, 60)
+erroLabel.Font = Enum.Font.GothamSemibold
+erroLabel.TextSize = 11
+erroLabel.Text = ""
+erroLabel.Parent = keyPanel
+
+--- ==========================================
+--- 2. ELEMENTOS DO MENU PRINCIPAL (Mrc_++)
+--- ==========================================
+local openButton = Instance.new("TextButton")
+openButton.Name = "BotaoAbrir"
+openButton.Size = UDim2.new(0, 140, 0, 45)
+openButton.Position = UDim2.new(0, 20, 0.85, 0)
+openButton.BackgroundColor3 = ROXO_ESCURO
+openButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+openButton.Font = Enum.Font.GothamBold
+openButton.TextSize = 14
+openButton.Text = "🔓 Mrc_++"
+openButton.Visible = false
+openButton.BorderSizePixel = 0
+openButton.Parent = screenGui
+
+local openStroke = Instance.new("UIStroke")
+openStroke.Color = ROXO_PRINCIPAL
+openStroke.Thickness = 1.5
+openStroke.Parent = openButton
+
+local mainPanel = Instance.new("Frame")
+mainPanel.Name = "MainPanel"
+mainPanel.Size = UDim2.new(0, 360, 0, 450)
+mainPanel.Position = UDim2.new(0.5, -180, 0.5, -225)
+mainPanel.BackgroundColor3 = ROXO_ESCURO
+mainPanel.BorderSizePixel = 0
+mainPanel.ClipsDescendants = true
+mainPanel.Visible = false
+mainPanel.Parent = screenGui
+
+local panelStroke = Instance.new("UIStroke")
+panelStroke.Color = ROXO_PRINCIPAL
+panelStroke.Thickness = 2
+panelStroke.Parent = mainPanel
+
+-- ScrollingFrame para rolagem do menu
+local contentFrame = Instance.new("ScrollingFrame")
+contentFrame.Name = "ContentFrame"
+contentFrame.Size = UDim2.new(1, 0, 1, -50)
+contentFrame.Position = UDim2.new(0, 0, 0, 50)
+contentFrame.BackgroundTransparency = 1
+contentFrame.BorderSizePixel = 0
+contentFrame.ScrollBarThickness = 5
+contentFrame.ScrollBarImageColor3 = ROXO_PRINCIPAL
+contentFrame.CanvasSize = UDim2.new(0, 0, 0, 600) -- Redimensionado idealmente
+contentFrame.Parent = mainPanel
+
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Name = "Titulo"
+titleLabel.Size = UDim2.new(1, -90, 0, 50)
+titleLabel.Position = UDim2.new(0, 20, 0, 0)
+titleLabel.BackgroundTransparency = 1
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.TextSize = 18
+titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+titleLabel.Text = "Mrc_++ ⚙️"
+titleLabel.Parent = mainPanel
+
+-- Botão de Fechar (X)
+local closeButton = Instance.new("TextButton")
+closeButton.Name = "BotaoFechar"
+closeButton.Size = UDim2.new(0, 30, 0, 30)
+closeButton.Position = UDim2.new(1, -40, 0, 10)
+closeButton.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeButton.Font = Enum.Font.GothamBold
+closeButton.TextSize = 14
+closeButton.Text = "X"
+closeButton.BorderSizePixel = 0
+closeButton.Parent = mainPanel
+
+-- Botão de Minimizar (_)
+local minimizeButton = Instance.new("TextButton")
+minimizeButton.Name = "BotaoMinimizar"
+minimizeButton.Size = UDim2.new(0, 30, 0, 30)
+minimizeButton.Position = UDim2.new(1, -75, 0, 10)
+minimizeButton.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+minimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+minimizeButton.Font = Enum.Font.GothamBold
+minimizeButton.TextSize = 14
+minimizeButton.Text = "_"
+minimizeButton.BorderSizePixel = 0
+minimizeButton.Parent = mainPanel
+
+--- ==========================================
+--- ⚙️ CONFIGURAÇÕES E ESTADO DO SCRIPT
+--- ==========================================
+local espSkeletonActive = false
+local espBoxActive = false
+local espLineActive = false -- Linhas ESP ativas
+local fovActive = false
+local aimbotActive = false
+local speedActive = false
+local autoReloadActive = false
+local noclipActive = false
+local noSpreadActive = false 
+local speedValue = 50 
+local fovRadius = 100
+local painelMinimizado = false
+
+local lockedTarget = nil -- Trava do Aimbot Sticky
+local originalSpreadValues = {} 
+
+-- Criando o círculo de FOV
+local fovCircle = Drawing.new("Circle")
+fovCircle.Visible = false
+fovCircle.Color = ROXO_PRINCIPAL
+fovCircle.Thickness = 1.5
+fovCircle.NumSides = 64
+fovCircle.Radius = fovRadius
+fovCircle.Filled = false
+fovCircle.Position = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+
+--- ==========================================
+--- 🎨 SISTEMA PRECISO DE FILTRO DE TIME
+--- ==========================================
+local function checarCorJogador(outroPlayer)
+	if filtroAtual == "ALL" then return true end
+
+	if outroPlayer.Team then
+		local nomeCor = string.lower(outroPlayer.Team.TeamColor.Name)
+		if filtroAtual == "ORANGE" then
+			return string.find(nomeCor, "orange") or string.find(nomeCor, "apricot") or string.find(nomeCor, "tangerine")
+		elseif filtroAtual == "BLUE" then
+			return string.find(nomeCor, "blue") or string.find(nomeCor, "teal") or string.find(nomeCor, "cyan")
+		elseif filtroAtual == "RED" then
+			return string.find(nomeCor, "red") or string.find(nomeCor, "maroon") or string.find(nomeCor, "crimson")
+		end
+	end
+
+	local corTime = outroPlayer.TeamColor and outroPlayer.TeamColor.Color
+	if corTime then
+		local r, g, b = corTime.R, corTime.G, corTime.B
+		if filtroAtual == "ORANGE" and (r > 0.7 and g > 0.3 and b < 0.3) then
+			return true
+		elseif filtroAtual == "BLUE" and (b > 0.7 and r < 0.4) then
+			return true
+		elseif filtroAtual == "RED" and (r > 0.7 and g < 0.3 and b < 0.3) then
+			return true
+		end
+	end
+
+	return false
+end
+
+--- ==========================================
+--- 👁️ FUNÇÃO WALL CHECK
+--- ==========================================
+local function estaVisivel(personagemInimigo)
+	if not player.Character or not personagemInimigo then return false end
+	local head = personagemInimigo:FindFirstChild("Head")
+	if not head then return false end
+
+	local origem = camera.CFrame.Position
+	local destino = head.Position
+	local direcao = (destino - origem)
+
+	local raycastParams = RaycastParams.new()
+	raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+	raycastParams.FilterDescendantsInstances = {player.Character, camera}
+	raycastParams.IgnoreWater = true
+
+	local resultado = workspace:Raycast(origem, direcao, raycastParams)
+
+	if not resultado or resultado.Instance:IsDescendantOf(personagemInimigo) then
+		return true
+	end
+	return false
+end
+
+--- ==========================================
+--- 🎯 SELEÇÃO DE ALVO NO FOV (STICKY)
+--- ==========================================
+local function obterJogadorMaisProximoNoFOV()
+	if lockedTarget and lockedTarget:FindFirstChild("Head") then
+		local hum = lockedTarget:FindFirstChildOfClass("Humanoid")
+		if hum and hum.Health > 0 and estaVisivel(lockedTarget) then
+			return lockedTarget
+		end
+	end
+
+	lockedTarget = nil
+	local alvoMaisProximo = nil
+	local menorDistancia = fovRadius
+	local centroDaTela = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+
+	for _, outroPlayer in ipairs(Players:GetPlayers()) do
+		if outroPlayer ~= player and outroPlayer.Character then
+			if checarCorJogador(outroPlayer) then
+				local caract = outroPlayer.Character
+				local head = caract:FindFirstChild("Head")
+				local humanoid = caract:FindFirstChildOfClass("Humanoid")
+
+				if head and humanoid and humanoid.Health > 0 then
+					if estaVisivel(caract) then
+						local posicaoTela, naTela = camera:WorldToViewportPoint(head.Position)
+
+						if naTela then
+							local posicaoInimigo2D = Vector2.new(posicaoTela.X, posicaoTela.Y)
+							local distancia2D = (posicaoInimigo2D - centroDaTela).Magnitude
+
+							if distancia2D < menorDistancia then
+								menorDistancia = distancia2D
+								alvoMaisProximo = caract
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+	
+	lockedTarget = alvoMaisProximo
+	return alvoMaisProximo
+end
+
+--- ==========================================
+--- 💀 LÓGICA DO ESP (SKELETON, BOX 2D & SNAPLINES)
+--- ==========================================
+local cacheEsp = {}
+
+local function criarLinha(cor, espessura)
+	local l = Drawing.new("Line")
+	l.Visible = false
+	l.Color = color or Color3.fromRGB(255, 0, 0)
+	l.Thickness = espessura or 1.5
+	l.Transparency = 1
+	return l
+end
+
+local function adicionarDesenhosEsp(outroPlayer)
+	if cacheEsp[outroPlayer] then return end
+
+	local desenhos = {
+		Box = {
+			Top = criarLinha(ROXO_PRINCIPAL),
+			Bottom = criarLinha(ROXO_PRINCIPAL),
+			Left = criarLinha(ROXO_PRINCIPAL),
+			Right = criarLinha(ROXO_PRINCIPAL)
+		},
+		Line = criarLinha(ROXO_PRINCIPAL, 1.2),
+		Skeleton = {}
+	}
+	
+	for i = 1, 15 do
+		table.insert(desenhos.Skeleton, criarLinha(Color3.fromRGB(255, 255, 255), 1.2))
+	end
+
+	cacheEsp[outroPlayer] = desenhos
+end
+
+local function removerDesenhosEsp(outroPlayer)
+	local desenhos = cacheEsp[outroPlayer]
+	if desenhos then
+		for _, linha in pairs(desenhos.Box) do
+			linha:Remove()
+		end
+		for _, linha in pairs(desenhos.Skeleton) do
+			linha:Remove()
+		end
+		if desenhos.Line then
+			desenhos.Line:Remove()
+		end
+		cacheEsp[outroPlayer] = nil
+	end
+end
+
+for _, p in ipairs(Players:GetPlayers()) do
+	if p ~= player then
+		adicionarDesenhosEsp(p)
+	end
+end
+Players.PlayerAdded:Connect(function(p)
+	if p ~= player then
+		adicionarDesenhosEsp(p)
+	end
+end)
+Players.PlayerRemoving:Connect(removerDesenhosEsp)
+
+local function atualizarEsp()
+	for outroPlayer, desenhos in pairs(cacheEsp) do
+		local caract = outroPlayer.Character
+		if not caract then
+			for _, l in pairs(desenhos.Box) do l.Visible = false end
+			for _, l in pairs(desenhos.Skeleton) do l.Visible = false end
+			desenhos.Line.Visible = false
+			continue
+		end
+
+		local humanoid = caract:FindFirstChildOfClass("Humanoid")
+		local hrp = caract:FindFirstChild("HumanoidRootPart")
+		local head = caract:FindFirstChild("Head")
+
+		if not humanoid or not hrp or not head or humanoid.Health <= 0 then
+			for _, l in pairs(desenhos.Box) do l.Visible = false end
+			for _, l in pairs(desenhos.Skeleton) do l.Visible = false end
+			desenhos.Line.Visible = false
+			continue
+		end
+
+		local posHrp, naTela = camera:WorldToViewportPoint(hrp.Position)
+		local corVisual = estaVisivel(caract) and ROXO_CLARO or Color3.fromRGB(255, 0, 0)
+
+		-- ESP LINES (SNAPLINES)
+		if espLineActive and naTela then
+			desenhos.Line.From = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y)
+			desenhos.Line.To = Vector2.new(posHrp.X, posHrp.Y)
+			desenhos.Line.Color = corVisual
+			desenhos.Line.Visible = true
+		else
+			desenhos.Line.Visible = false
+		end
+
+		-- ESP BOX
+		if espBoxActive and naTela then
+			local topo, _ = camera:WorldToViewportPoint(head.Position + Vector3.new(0, 1.8, 0))
+			local base, _ = camera:WorldToViewportPoint(hrp.Position - Vector3.new(0, 3, 0))
+			
+			local altura = math.abs(topo.Y - base.Y)
+			local largura = altura / 1.5
+
+			local x = posHrp.X - largura / 2
+			local y = topo.Y
+
+			desenhos.Box.Top.From = Vector2.new(x, y)
+			desenhos.Box.Top.To = Vector2.new(x + largura, y)
+			desenhos.Box.Top.Color = corVisual
+			desenhos.Box.Top.Visible = true
+
+			desenhos.Box.Bottom.From = Vector2.new(x, y + altura)
+			desenhos.Box.Bottom.To = Vector2.new(x + largura, y + altura)
+			desenhos.Box.Bottom.Color = corVisual
+			desenhos.Box.Bottom.Visible = true
+
+			desenhos.Box.Left.From = Vector2.new(x, y)
+			desenhos.Box.Left.To = Vector2.new(x, y + altura)
+			desenhos.Box.Left.Color = corVisual
+			desenhos.Box.Left.Visible = true
+
+			desenhos.Box.Right.From = Vector2.new(x + largura, y)
+			desenhos.Box.Right.To = Vector2.new(x + largura, y + altura)
+			desenhos.Box.Right.Color = corVisual
+			desenhos.Box.Right.Visible = true
+		else
+			for _, l in pairs(desenhos.Box) do l.Visible = false end
+		end
+
+		-- ESP SKELETON
+		if espSkeletonActive and naTela then
+			local conexoes = {}
+			local isR15 = (humanoid.RigType == Enum.HumanoidRigType.R15)
+
+			if isR15 then
+				local parts = {
+					Head = head,
+					UpperTorso = caract:FindFirstChild("UpperTorso"),
+					LowerTorso = caract:FindFirstChild("LowerTorso"),
+					LeftUpperArm = caract:FindFirstChild("LeftUpperArm"),
+					LeftLowerArm = caract:FindFirstChild("LeftLowerArm"),
+					LeftHand = caract:FindFirstChild("LeftHand"),
+					RightUpperArm = caract:FindFirstChild("RightUpperArm"),
+					RightLowerArm = caract:FindFirstChild("RightLowerArm"),
+					RightHand = caract:FindFirstChild("RightHand"),
+					LeftUpperLeg = caract:FindFirstChild("LeftUpperLeg"),
+					LeftLowerLeg = caract:FindFirstChild("LeftLowerLeg"),
+					LeftFoot = caract:FindFirstChild("LeftFoot"),
+					RightUpperLeg = caract:FindFirstChild("RightUpperLeg"),
+					RightLowerLeg = caract:FindFirstChild("RightLowerLeg"),
+					RightFoot = caract:FindFirstChild("RightFoot")
+				}
+
+				if parts.UpperTorso and parts.LowerTorso then
+					conexoes = {
+						{parts.Head, parts.UpperTorso},
+						{parts.UpperTorso, parts.LowerTorso},
+						{parts.UpperTorso, parts.LeftUpperArm},
+						{parts.LeftUpperArm, parts.LeftLowerArm},
+						{parts.LeftLowerArm, parts.LeftHand},
+						{parts.UpperTorso, parts.RightUpperArm},
+						{parts.RightUpperArm, parts.RightLowerArm},
+						{parts.RightLowerArm, parts.RightHand},
+						{parts.LowerTorso, parts.LeftUpperLeg},
+						{parts.LeftUpperLeg, parts.LeftLowerLeg},
+						{parts.LeftLowerLeg, parts.LeftFoot},
+						{parts.LowerTorso, parts.RightUpperLeg},
+						{parts.RightUpperLeg, parts.RightLowerLeg},
+						{parts.RightLowerLeg, parts.RightFoot}
+					}
+				end
+			else
+				local parts = {
+					Head = head,
+					Torso = caract:FindFirstChild("Torso"),
+					LeftArm = caract:FindFirstChild("Left Arm"),
+					RightArm = caract:FindFirstChild("Right Arm"),
+					LeftLeg = caract:FindFirstChild("Left Leg"),
+					RightLeg = caract:FindFirstChild("Right Leg")
+				}
+
+				if parts.Torso then
+					conexoes = {
+						{parts.Head, parts.Torso},
+						{parts.Torso, parts.LeftArm},
+						{parts.Torso, parts.RightArm},
+						{parts.Torso, parts.LeftLeg},
+						{parts.Torso, parts.RightLeg}
+					}
+				end
+			end
+
+			local indiceLinha = 1
+			local corSkel = estaVisivel(caract) and ROXO_CLARO or Color3.fromRGB(255, 255, 255)
+
+			for _, conexao in ipairs(conexoes) do
+				local partA, partB = conexao[1], conexao[2]
+				if partA and partB then
+					local pA, naTelaA = camera:WorldToViewportPoint(partA.Position)
+					local pB, naTelaB = camera:WorldToViewportPoint(partB.Position)
+
+					if naTelaA and naTelaB then
+						local line = desenhos.Skeleton[indiceLinha]
+						if line then
+							line.From = Vector2.new(pA.X, pA.Y)
+							line.To = Vector2.new(pB.X, pB.Y)
+							line.Color = corSkel
+							line.Visible = true
+							indiceLinha = indiceLinha + 1
+						end
+					end
+				end
+			end
+
+			for i = indiceLinha, #desenhos.Skeleton do
+				desenhos.Skeleton[i].Visible = false
+			end
+		else
+			for _, l in pairs(desenhos.Skeleton) do l.Visible = false end
+		end
+	end
+end
+
+--- ==========================================
+--- 🛠️ SEÇÃO DE CRIAÇÃO DE BOTÕES (No ContentFrame)
+--- ==========================================
+local function criarBotaoToggle(nome, texto, posicaoY)
+	local label = Instance.new("TextLabel")
+	label.Name = nome .. "Label"
+	label.Size = UDim2.new(0, 160, 0, 35)
+	label.Position = UDim2.new(0, 20, 0, posicaoY)
+	label.BackgroundTransparency = 1
+	label.TextColor3 = Color3.fromRGB(220, 220, 220)
+	label.Font = Enum.Font.GothamMedium
+	label.TextSize = 13
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.Text = texto
+	label.Parent = contentFrame
+
+	local button = Instance.new("TextButton")
+	button.Name = nome .. "Toggle"
+	button.Size = UDim2.new(0, 110, 0, 32)
+	button.Position = UDim2.new(1, -130, 0, posicaoY)
+	button.BackgroundColor3 = ROXO_BOTAO_OFF
+	button.TextColor3 = Color3.fromRGB(255, 255, 255)
+	button.Font = Enum.Font.GothamBold
+	button.TextSize = 12
+	button.Text = "OFF"
+	button.BorderSizePixel = 0
+	button.Parent = contentFrame
+
+	return button
+end
+
+-- Botões do Painel Atualizados e Sincronizados (Sem Silent Aim)
+local btnSkeleton   = criarBotaoToggle("EspSkeleton", "Esp Esqueleto", 10)
+local btnBox        = criarBotaoToggle("EspBox", "Esp Box", 50)
+local btnLine       = criarBotaoToggle("EspLine", "Esp Linha", 90) 
+local btnFov        = criarBotaoToggle("FovToggle", "Ativar FOV", 130)
+local btnAimbot     = criarBotaoToggle("AimbotToggle", "Aimbot Head", 170)
+local btnSpeed      = criarBotaoToggle("SpeedToggle", "Ativar Speed", 210)
+local btnAutoReload = criarBotaoToggle("AutoReloadToggle", "🔄 Auto Reload", 250)
+local btnNoclip     = criarBotaoToggle("NoclipToggle", "🧱 Noclip", 290)
+local btnNoSpread   = criarBotaoToggle("NoSpreadToggle", "🎯 No Spread", 330)
+
+-- Filtro de Cor (Reposicionado)
+local labelFiltro = Instance.new("TextLabel")
+labelFiltro.Name = "FiltroAimbotLabel"
+labelFiltro.Size = UDim2.new(0, 160, 0, 35)
+labelFiltro.Position = UDim2.new(0, 20, 0, 370)
+labelFiltro.BackgroundTransparency = 1
+labelFiltro.TextColor3 = Color3.fromRGB(220, 220, 220)
+labelFiltro.Font = Enum.Font.GothamMedium
+labelFiltro.TextSize = 13
+labelFiltro.TextXAlignment = Enum.TextXAlignment.Left
+labelFiltro.Text = "Filtro de Time"
+labelFiltro.Parent = contentFrame
+
+local btnFiltroColor = Instance.new("TextButton")
+btnFiltroColor.Name = "FiltroAimbotToggle"
+btnFiltroColor.Size = UDim2.new(0, 110, 0, 32)
+btnFiltroColor.Position = UDim2.new(1, -130, 0, 370)
+btnFiltroColor.BackgroundColor3 = ROXO_PRINCIPAL
+btnFiltroColor.TextColor3 = Color3.fromRGB(255, 255, 255)
+btnFiltroColor.Font = Enum.Font.GothamBold
+btnFiltroColor.TextSize = 11
+btnFiltroColor.Text = "TODOS"
+btnFiltroColor.BorderSizePixel = 0
+btnFiltroColor.Parent = contentFrame
+
+btnFiltroColor.MouseButton1Click:Connect(function()
+	if not keyAprovada then return end
+	if filtroAtual == "ALL" then
+		filtroAtual = "ORANGE"
+	elseif filtroAtual == "ORANGE" then
+		filtroAtual = "BLUE"
+	elseif filtroAtual == "BLUE" then
+		filtroAtual = "RED"
+	else
+		filtroAtual = "ALL"
+	end
+
+	local configs = CORES_FILTRO[filtroAtual]
+	btnFiltroColor.Text = string.upper(configs.Nome)
+	TweenService:Create(btnFiltroColor, TweenInfo.new(0.2), {BackgroundColor3 = configs.Cor}):Play()
+end)
+
+local function atualizarVisualBotao(botao, ativo)
+	local corAlvo = ativo and ROXO_PRINCIPAL or ROXO_BOTAO_OFF
+	local textoAlvo = ativo and "ON" or "OFF"
+	botao.Text = textoAlvo
+	TweenService:Create(botao, TweenInfo.new(0.2), {BackgroundColor3 = corAlvo}):Play()
+end
+
+btnSkeleton.MouseButton1Click:Connect(function()
+	if not keyAprovada then return end
+	espSkeletonActive = not espSkeletonActive
+	atualizarVisualBotao(btnSkeleton, espSkeletonActive)
+end)
+
+btnBox.MouseButton1Click:Connect(function()
+	if not keyAprovada then return end
+	espBoxActive = not espBoxActive
+	atualizarVisualBotao(btnBox, espBoxActive)
+end)
+
+btnLine.MouseButton1Click:Connect(function()
+	if not keyAprovada then return end
+	espLineActive = not espLineActive
+	atualizarVisualBotao(btnLine, espLineActive)
+end)
+
+btnFov.MouseButton1Click:Connect(function()
+	if not keyAprovada then return end
+	fovActive = not fovActive
+	atualizarVisualBotao(btnFov, fovActive)
+	fovCircle.Visible = fovActive
+end)
+
+btnAimbot.MouseButton1Click:Connect(function()
+	if not keyAprovada then return end
+	aimbotActive = not aimbotActive
+	atualizarVisualBotao(btnAimbot, aimbotActive)
+end)
+
+btnSpeed.MouseButton1Click:Connect(function()
+	if not keyAprovada then return end
+	speedActive = not speedActive
+	atualizarVisualBotao(btnSpeed, speedActive)
+	
+	if not speedActive then
+		local char = player.Character
+		if char then
+			local hum = char:FindFirstChildOfClass("Humanoid")
+			if hum then hum.WalkSpeed = 16 end
+		end
+	end
+end)
+
+btnAutoReload.MouseButton1Click:Connect(function()
+	if not keyAprovada then return end
+	autoReloadActive = not autoReloadActive
+	atualizarVisualBotao(btnAutoReload, autoReloadActive)
+end)
+
+btnNoclip.MouseButton1Click:Connect(function()
+	if not keyAprovada then return end
+	noclipActive = not noclipActive
+	atualizarVisualBotao(btnNoclip, noclipActive)
+end)
+
+-- Lógica para ativar e desativar o No Spread
+local function restaurarSpreadOriginal()
+	for objeto, valor in pairs(originalSpreadValues) do
+		if objeto and objeto.Parent then
+			objeto.Value = valor
+		end
+	end
+	table.clear(originalSpreadValues)
+end
+
+btnNoSpread.MouseButton1Click:Connect(function()
+	if not keyAprovada then return end
+	noSpreadActive = not noSpreadActive
+	atualizarVisualBotao(btnNoSpread, noSpreadActive)
+	
+	if not noSpreadActive then
+		restaurarSpreadOriginal()
+	end
+end)
+
+--- ==========================================
+--- 🎛️ CRIAÇÃO DOS SLIDERS (Reposicionados para o final)
+--- ==========================================
+local function criarSlider(nome, texto, posicaoY, min, max, padrao, callback)
+	local label = Instance.new("TextLabel")
+	label.Name = nome .. "Label"
+	label.Size = UDim2.new(0, 200, 0, 20)
+	label.Position = UDim2.new(0, 20, 0, posicaoY)
+	label.BackgroundTransparency = 1
+	label.TextColor3 = Color3.fromRGB(220, 220, 220)
+	label.Font = Enum.Font.GothamMedium
+	label.TextSize = 13
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.Text = texto .. ": " .. padrao
+	label.Parent = contentFrame
+
+	local sliderFrame = Instance.new("Frame")
+	sliderFrame.Name = nome .. "Frame"
+	sliderFrame.Size = UDim2.new(1, -45, 0, 8)
+	sliderFrame.Position = UDim2.new(0, 20, 0, posicaoY + 25)
+	sliderFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+	sliderFrame.BorderSizePixel = 0
+	sliderFrame.Parent = contentFrame
+
+	local pctPadrao = (padrao - min) / (max - min)
+
+	local sliderProgress = Instance.new("Frame")
+	sliderProgress.Name = nome .. "Progress"
+	sliderProgress.Size = UDim2.new(pctPadrao, 0, 1, 0)
+	sliderProgress.BackgroundColor3 = ROXO_PRINCIPAL
+	sliderProgress.BorderSizePixel = 0
+	sliderProgress.Parent = sliderFrame
+
+	local sliderButton = Instance.new("TextButton")
+	sliderButton.Name = nome .. "Button"
+	sliderButton.Size = UDim2.new(0, 14, 0, 18)
+	sliderButton.Position = UDim2.new(pctPadrao, -7, 0.5, -9)
+	sliderButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	sliderButton.Text = ""
+	sliderButton.BorderSizePixel = 0
+	sliderButton.Parent = sliderFrame
+
+	local sbStroke = Instance.new("UIStroke")
+	sbStroke.Color = ROXO_PRINCIPAL
+	sbStroke.Thickness = 1
+	sbStroke.Parent = sliderButton
+
+	local dragging = false
+
+	local function updateSlider(input)
+		local mouseX = input.Position.X
+		local sliderX = sliderFrame.AbsolutePosition.X
+		local sliderWidth = sliderFrame.AbsoluteSize.X
+		
+		local percentage = math.clamp((mouseX - sliderX) / sliderWidth, 0, 1)
+		
+		sliderButton.Position = UDim2.new(percentage, -7, 0.5, -9)
+		sliderProgress.Size = UDim2.new(percentage, 0, 1, 0)
+		
+		local valorCalculado = math.floor(min + (percentage * (max - min)))
+		label.Text = texto .. ": " .. valorCalculado
+		callback(valorCalculado)
+	end
+
+	sliderButton.InputBegan:Connect(function(input)
+		if not keyAprovada then return end
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+		end
+	end)
+
+	UserInputService.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = false
+		end
+	end)
+
+	UserInputService.InputChanged:Connect(function(input)
+		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+			updateSlider(input)
+		end
+	end)
+end
+
+criarSlider("FovSlider", "Tamanho FOV", 420, 10, 300, 100, function(v)
+	fovRadius = v
+end)
+
+criarSlider("SpeedSlider", "Velocidade Correr", 480, 16, 250, 50, function(v)
+	speedValue = v
+end)
+
+--- ==========================================
+--- 🔄 MECÂNICA DE RECARGA AUTOMÁTICA
+--- ==========================================
+local ultimoTempoRecarga = 0
+
+local function verificarAutoReload()
+	if not autoReloadActive then return end
+	if os.clock() - ultimoTempoRecarga < 1.5 then return end
+
+	local char = player.Character
+	if not char then return end
+
+	local armaEquipada = char:FindFirstChildOfClass("Tool")
+	if armaEquipada then
+		local ammo = armaEquipada:FindFirstChild("Ammo") or armaEquipada:FindFirstChild("Clip") or armaEquipada:FindFirstChild("CurrentAmmo")
+		if ammo and ammo:IsA("ValueBase") and ammo.Value == 0 then
+			ultimoTempoRecarga = os.clock()
+			VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.R, false, game)
+			task.wait(0.05)
+			VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.R, false, game)
+		end
+	end
+end
+
+--- ==========================================
+--- 🧱 NOCLIP INTELIGENTE (IGNORA O CHÃO)
+--- ==========================================
+local function processarNoclip()
+	if not noclipActive then return end
+	local char = player.Character
+	if not char then return end
+	local hrp = char:FindFirstChild("HumanoidRootPart")
+	if not hrp then return end
+
+	local tamanhoCaixa = Vector3.new(3.5, 5, 3.5)
+	local cframeCaixa = hrp.CFrame * CFrame.new(0, 0.4, 0)
+
+	local params = OverlapParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = {char}
+
+	local partesProximas = workspace:GetPartBoundsInBox(cframeCaixa, tamanhoCaixa, params)
+
+	for _, parte in ipairs(partesProximas) do
+		if parte:IsA("BasePart") and parte.CanCollide then
+			local diferencaY = hrp.Position.Y - parte.Position.Y
+			
+			if diferencaY < 2.6 then 
+				parte.CanCollide = false
+				
+				task.delay(0.1, function()
+					if parte and parte.Parent then
+						parte.CanCollide = true
+					end
+				end)
+			end
+		end
+	end
+end
+
+--- ==========================================
+--- 🎯 LÓGICA DO NO SPREAD (SEM DISPERSÃO)
+--- ==========================================
+local function processarNoSpread()
+	if not noSpreadActive then return end
+	local char = player.Character
+	if not char then return end
+	local tool = char:FindFirstChildOfClass("Tool")
+	if not tool then return end
+
+	for _, desc in ipairs(tool:GetDescendants()) do
+		if desc:IsA("NumberValue") or desc:IsA("IntValue") then
+			local nomeLower = string.lower(desc.Name)
+			if string.find(nomeLower, "spread") or string.find(nomeLower, "recoil") or string.find(nomeLower, "accuracy") or string.find(nomeLower, "dispersion") or string.find(nomeLower, "inaccuracy") or string.find(nomeLower, "aimcone") then
+				if not originalSpreadValues[desc] then
+					originalSpreadValues[desc] = desc.Value
+				end
+				desc.Value = 0
+			end
+		end
+	end
+end
+
+--- ==========================================
+--- 🔄 LOOP DE ATUALIZAÇÃO (RENDER STEPPED)
+--- ==========================================
+RunService.RenderStepped:Connect(function()
+	if not keyAprovada then return end
+
+	if fovActive then
+		fovCircle.Position = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+		fovCircle.Radius = fovRadius
+	end
+
+	atualizarEsp()
+
+	-- Aimbot Sticky
+	if aimbotActive then
+		local alvo = obterJogadorMaisProximoNoFOV()
+		if alvo and alvo:FindFirstChild("Head") then
+			camera.CFrame = camera.CFrame:Lerp(CFrame.new(camera.CFrame.Position, alvo.Head.Position), 0.25)
+		end
+	end
+
+	verificarAutoReload()
+	processarNoclip()
+	processarNoSpread()
+
+	if speedActive then
+		local char = player.Character
+		if char then
+			local hum = char:FindFirstChildOfClass("Humanoid")
+			if hum and hum.WalkSpeed ~= speedValue then
+				hum.WalkSpeed = speedValue
+			end
+		end
+	end
+end)
+
+--- ==========================================
+--- 🎬 SISTEMA DE ANIMAÇÃO DO PAINEL / MINIMIZAR
+--- ==========================================
+local isAnimating = false
+
+local function togglePanel(show)
+	if isAnimating or not keyAprovada then return end
+	isAnimating = true
+	
+	local targetSize = show and UDim2.new(0, 360, 0, 450) or UDim2.new(0, 360, 0, 0)
+	local tweenInfo = TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+	
+	if show then
+		mainPanel.Size = UDim2.new(0, 360, 0, 0)
+		mainPanel.Visible = true
+		contentFrame.Visible = true
+		minimizeButton.Text = "_"
+		painelMinimizado = false
+	end
+	
+	local tween = TweenService:Create(mainPanel, tweenInfo, {Size = targetSize})
+	tween:Play()
+	
+	tween.Completed:Connect(function()
+		if not show then
+			mainPanel.Visible = false
+		end
+		isAnimating = false
+	end)
+end
+
+minimizeButton.MouseButton1Click:Connect(function()
+	if isAnimating or not keyAprovada then return end
+	isAnimating = true
+
+	painelMinimizado = not painelMinimizado
+	
+	local alturaAlvo = painelMinimizado and 50 or 450
+	local targetSize = UDim2.new(0, 360, 0, alturaAlvo)
+	local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+	if not painelMinimizado then
+		contentFrame.Visible = true
+		minimizeButton.Text = "_"
+	else
+		minimizeButton.Text = "⬜"
+	end
+
+	local tween = TweenService:Create(mainPanel, tweenInfo, {Size = targetSize})
+	tween:Play()
+
+	tween.Completed:Connect(function()
+		if painelMinimizado then
+			contentFrame.Visible = false
+		end
+		isAnimating = false
+	end)
+end)
+
+openButton.MouseButton1Click:Connect(function()
+	if not mainPanel.Visible then
+		togglePanel(true)
+	end
+end)
+
+closeButton.MouseButton1Click:Connect(function()
+	togglePanel(false)
+end)
+
+--- ==========================================
+--- 🖱️ SISTEMA DE ARRASTAR O PAINEL (DRAG)
+--- ==========================================
+local dragging, dragInput, dragStart, startPos
+titleLabel.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = mainPanel.Position
+		
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
+end)
+
+titleLabel.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+		dragInput = input
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if input == dragInput and dragging then
+		local delta = input.Position - dragStart
+		mainPanel.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
+end)
+
+--- ==========================================
+--- 🔑 VERIFICAÇÃO DA KEY
+--- ==========================================
+keyVerifyBtn.MouseButton1Click:Connect(function()
+	if keyTextBox.Text == KEY_CORRETA then
+		keyAprovada = true
+		erroLabel.TextColor3 = ROXO_CLARO
+		erroLabel.Text = "Acesso Permitido! Carregando..."
+		
+		task.wait(1)
+		
+		local sumirTween = TweenService:Create(keyPanel, TweenInfo.new(0.3), {BackgroundTransparency = 1})
+		sumirTween:Play()
+		keyTextBox.Visible = false
+		keyVerifyBtn.Visible = false
+		keyTitle.Visible = false
+		erroLabel.Visible = false
+		
+		sumirTween.Completed:Connect(function()
+			keyPanel:Destroy()
+			openButton.Visible = true
+			togglePanel(true)
+		end)
+	else
+		erroLabel.Text = "Key incorreta! Tente novamente."
+		keyTextBox.Text = ""
+	end
+end)
